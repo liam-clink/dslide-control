@@ -1,0 +1,1 @@
+call cl /std:c++20 /EHsc  main.cpp /link PerformaxCom.lib /OUT:test.exe

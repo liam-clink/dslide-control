@@ -1,4 +1,5 @@
 import ctypes
+import atexit
 
 performax = ctypes.WinDLL("./PerformaxCom.dll")
 
@@ -67,9 +68,17 @@ class DSlide:
         device_count = get_num_devices()
         print(f"Device count: {device_count}")
         self.open_connection(0)
+        self.flush()
         set_timeouts(1000, 1000)
-        print(self.set_position_index(-1250000))
-        self.close_connection()
+        atexit.register(self.close_connection)
+
+    def flush(self):
+        """
+        Flushes the communication buffer on the PC as well as the USB controller. It
+        is recommended to perform this operation right after the communication
+        handle is opened
+        """
+        performax.fnPerformaxComFlush(self.handle)
 
     def open_connection(self, device_number: int) -> bool:
         """
@@ -127,6 +136,36 @@ class DSlide:
         Convert length in mm to index
         """
         return int(round(mm * 1000000 / 400))
+
+    def stop(self):
+        """
+        Stops the motor using deceleration
+        """
+        self.send_command(b"STOP")
+
+    def set_accel_time(self, accel_time_ms: int):
+        """
+        Set the time it takes to accelerate and decelerate in milliseconds
+        """
+        self.send_command(b"ACC" + str(accel_time_ms).encode("ascii"))
+
+    def get_accel_time(self) -> int:
+        """
+        Gets the acceleration time in milliseconds
+        """
+        return int(self.send_command(b"ACC"))
+
+    def set_move_speed(self, move_speed_hz: int):
+        """
+        Sets the move speed in index / s
+        """
+        return int(self.send_command(b"HSPD" + str(move_speed_hz).encode("ascii")))
+
+    def get_move_speed(self) -> int:
+        """
+        Gets the move speed in index / s
+        """
+        return int(self.send_command(b"HSPD"))
 
 
 if __name__ == "__main__":
